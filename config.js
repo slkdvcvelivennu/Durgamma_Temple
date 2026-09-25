@@ -1,0 +1,4 @@
+const APP_CONFIG = {
+  APPS_SCRIPT_URL: "",
+  ADMIN_SHEET_URL: ""
+};
