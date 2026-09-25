@@ -1,29 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Durgamma Temple website" />
-    <title>Durgamma Temple</title>
-  </head>
-  <body>
-    <header>
-      <h1>Durgamma Temple</h1>
-      <p>Welcome to Durgamma Temple.</p>
-    </header>
-    <main>
-      <section>
-        <h2>About the Temple</h2>
-        <p>Temple information will be added here.</p>
-      </section>
-      <section>
-        <h2>Services &amp; Events</h2>
-        <p>Details about poojas, festivals, timings and events will be added here.</p>
-      </section>
-      <section>
-        <h2>Contact</h2>
-        <p>Contact information will be added here.</p>
-      </section>
-    </main>
-  </body>
-</html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Durgamma Temple Finance Dashboard">
+<title>Durgamma Temple • Finance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-shell">
+<header class="topbar"><div class="brand"><div class="brand-mark">ॐ</div><div><div class="eyebrow">Temple Finance</div><h1>శ్రీ లక్ష్మీ కనక దుర్గమ్మ ఆలయం</h1></div></div><button class="admin-button" id="adminButton"><span>♙</span><span id="adminButtonText">Admin Login</span></button></header>
+<section class="hero"><img src="assets/temple.jpg" alt="Sri Lakshmi Kanaka Durgamma Temple"><div class="hero-overlay"></div><div class="hero-content"><span class="hero-kicker">Transparent • Simple • Accountable</span><h2>Temple Finance Dashboard</h2><p>View daily income, expenditure and the remaining temple balance in one place.</p></div></section>
+<main class="content">
+<section class="summary-grid">
+<button class="summary-card income" data-view="income"><span class="card-label">Income</span><strong id="incomeTotal">₹0</strong><span class="card-hint">View all income transactions →</span></button>
+<button class="summary-card expense" data-view="expense"><span class="card-label">Expenditure</span><strong id="expenseTotal">₹0</strong><span class="card-hint">View all expenditure transactions →</span></button>
+<button class="summary-card balance" data-view="all"><span class="card-label">Total Aggregation</span><strong id="balanceTotal">₹0</strong><span class="card-hint">Day-wise income, expenditure & balance →</span></button>
+</section>
+<section class="toolbar"><div><span class="section-kicker">Transactions</span><h2 id="viewTitle">Total Aggregation</h2></div><div class="toolbar-actions">
+<label class="date-control"><span>From</span><input id="fromDate" type="date"></label><label class="date-control"><span>To</span><input id="toDate" type="date"></label>
+<button class="secondary-button" id="clearFilters">Clear</button><button class="primary-button admin-only" id="addTransaction" hidden>+ Add Entry</button>
+</div></section>
+<section class="transaction-panel">
+<div class="panel-summary"><div><span>Entries</span><strong id="entryCount">0</strong></div><div><span>Income</span><strong class="text-income" id="panelIncome">₹0</strong></div><div><span>Expenditure</span><strong class="text-expense" id="panelExpense">₹0</strong></div><div><span>Net</span><strong id="panelNet">₹0</strong></div></div>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Payment</th><th class="amount">Amount</th><th class="balance-col">Running Balance</th><th class="admin-only" hidden>Action</th></tr></thead><tbody id="transactionBody"></tbody></table></div>
+<div class="empty-state" id="emptyState" hidden><div class="empty-icon">◌</div><h3>No transactions found</h3><p>Try changing the date filter or add a new entry from Admin mode.</p></div>
+</section></main>
+<footer><span>శ్రీ లక్ష్మీ కనక దుర్గమ్మ ఆలయం</span><span>Finance records • Read-only for visitors</span></footer>
+</div>
+<div class="modal-backdrop" id="modalBackdrop" hidden><div class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="modalClose">×</button><div id="modalContent"></div></div></div>
+<script src="app.js"></script>
+</body></html>
