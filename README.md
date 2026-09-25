@@ -27,3 +27,5 @@ For production, connect this UI to Supabase (or another backend):
 
 Recommended transaction columns:
 id, transaction_date, type, description, category, payment_method, amount, created_at, created_by.
+
+GitHub Pages deployment is configured through `.github/workflows/deploy-pages.yml`.
