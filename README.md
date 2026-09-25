@@ -1,31 +1,7 @@
-# Durgamma Temple Finance Dashboard
+# Durgamma Temple Finance
 
-Responsive UI for temple finance management.
+Public portal: https://slkdvcvelivennu.github.io/Durgamma_Temple/
 
-## UI requirements implemented
-- Temple photo hero
-- Income, Expenditure and Total Aggregation cards
-- Income-only transaction view
-- Expenditure-only transaction view
-- Combined day-wise transaction view
-- Running balance
-- Date filters
-- Responsive mobile layout
-- Admin-only Add/Edit controls in the UI
-- Visitor read-only presentation
+GitHub Pages hosts the portal. Google Sheets stores the finance records. Google Apps Script exposes the Sheet data to the public portal without publishing the Sheet itself.
 
-## Production architecture
-This repository currently contains the **front-end prototype**. The login and transaction changes are intentionally not presented as secure authentication: browser-only JavaScript cannot enforce admin permissions for a shared public website.
-
-For production, connect this UI to Supabase (or another backend):
-- Auth: admin email/password or magic link
-- Database: transactions table
-- Public visitors: SELECT only
-- Admin: INSERT/UPDATE/DELETE through database policies
-- Row Level Security: enabled
-- Never put an admin password or database secret in frontend code
-
-Recommended transaction columns:
-id, transaction_date, type, description, category, payment_method, amount, created_at, created_by.
-
-GitHub Pages deployment is configured through `.github/workflows/deploy-pages.yml`.
+Setup instructions: google-apps-script/README.md
