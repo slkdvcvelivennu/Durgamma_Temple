@@ -1,15 +1,165 @@
-let transactions=[],currentView="all",isAdmin=false,liveMode=false;
-const money=v=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v);
-const normalizeDate=v=>{if(!v)return "";const s=String(v).trim();const direct=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(direct)return direct[1]+"-"+String(direct[2]).padStart(2,"0")+"-"+String(direct[3]).padStart(2,"0");const parsed=s.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{4})/);if(parsed){const months={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};return parsed[2]+"-"+months[s.slice(4,7)]+"-"+String(parsed[1]).padStart(2,"0")}const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toISOString().slice(0,10)};
-const formatDate=v=>{const d=new Date(normalizeDate(v)+"T00:00:00");return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})};
+let transactions=[],currentView="all",liveMode=false;
+
+const money=v=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(Number(v)||0);
+const normalizeDate=v=>{
+  if(!v)return "";
+  const s=String(v).trim();
+  const direct=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(direct)return direct[1]+"-"+String(direct[2]).padStart(2,"0")+"-"+String(direct[3]).padStart(2,"0");
+  const parsed=s.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{4})/);
+  if(parsed){
+    const months={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+    return parsed[2]+"-"+months[s.slice(4,7)]+"-"+String(parsed[1]).padStart(2,"0");
+  }
+  const d=new Date(s);
+  return Number.isNaN(d.getTime())?s:d.toISOString().slice(0,10);
+};
+const formatDate=v=>{
+  const d=new Date(normalizeDate(v)+"T00:00:00");
+  return Number.isNaN(d.getTime())?String(v||""):d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+};
+const formatModifiedDate=v=>{
+  if(!v)return "";
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime()))return String(v);
+  return d.toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
+};
 const $=id=>document.getElementById(id);
-const els={incomeTotal:$( "incomeTotal"),expenseTotal:$( "expenseTotal"),balanceTotal:$( "balanceTotal"),viewTitle:$( "viewTitle"),body:$( "transactionBody"),empty:$( "emptyState"),count:$( "entryCount"),panelIncome:$( "panelIncome"),panelExpense:$( "panelExpense"),panelNet:$( "panelNet"),from:$( "fromDate"),to:$( "toDate"),adminButton:$( "adminButton"),adminButtonText:$( "adminButtonText"),backdrop:$( "modalBackdrop"),content:$( "modalContent")};
-function totals(list){const income=list.filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0),expense=list.filter(x=>x.type==="expense").reduce((s,x)=>s+x.amount,0);return{income,expense,balance:income-expense}}
-function filtered(){const from=els.from.value,to=els.to.value;return[...transactions].filter(x=>currentView==="all"||x.type===currentView).filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id)}
-function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function render(){const list=filtered(),t=totals(list);els.viewTitle.textContent=currentView==="income"?"Income Transactions":currentView==="expense"?"Expenditure Transactions":"Total Aggregation";els.count.textContent=list.length;els.panelIncome.textContent=money(t.income);els.panelExpense.textContent=money(t.expense);els.panelNet.textContent=money(t.balance);els.body.innerHTML="";const chronological=[...transactions].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);let run=0,map=new Map;chronological.forEach(x=>{run+=x.type==="income"?x.amount:-x.amount;map.set(x.id,run)});list.forEach(x=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${formatDate(x.date)}</td><td><span class="type-pill ${x.type==="income"?"type-income":"type-expense"}">${x.type==="income"?"Income":"Expenditure"}</span></td><td><strong>${esc(x.description)}</strong></td><td>${esc(x.category)}</td><td>${esc(x.payment)}</td><td class="amount ${x.type==="income"?"text-income":"text-expense"}">${x.type==="income"?"+":"-"} ${money(x.amount)}</td><td class="balance-col balance-positive">${money(map.get(x.id))}</td>`;els.body.appendChild(tr)});els.empty.hidden=list.length!==0;const all=totals(transactions);els.incomeTotal.textContent=money(all.income);els.expenseTotal.textContent=money(all.expense);els.balanceTotal.textContent=money(all.balance)}
-function loadLiveData(){const url=window.APP_CONFIG&&window.APP_CONFIG.APPS_SCRIPT_URL;if(!url){showLoadError();return}const callback="templeFinanceCallback";let finished=false;const script=document.createElement("script");let timeout;const cleanup=()=>{if(finished)return;finished=true;clearTimeout(timeout);window[callback]=null;script.remove()};window[callback]=payload=>{try{if(payload&&Array.isArray(payload.transactions)){transactions=payload.transactions.map(x=>{const rawType=String(x.type||"").trim().toLowerCase();const type=rawType==="expenditure"||rawType==="expense"?"expense":rawType==="income"?"income":rawType;return{...x,id:Number(x.id)||0,date:normalizeDate(x.date),type,description:String(x.description||"").trim(),category:String(x.category||"").trim(),payment:String(x.payment||"").trim(),amount:Number(x.amount)||0}});liveMode=true;render();cleanup();return}showLoadError()}catch(error){showLoadError()}cleanup()};script.onerror=()=>{showLoadError();cleanup()};script.src=url+"?prefix="+encodeURIComponent(callback)+"&_="+Date.now();document.head.appendChild(script);timeout=setTimeout(()=>{if(!finished){showLoadError();cleanup()}},10000)}
-function showLoadError(){transactions=[];render();els.empty.hidden=false;els.empty.innerHTML="<div class=\"empty-icon\">!</div><h3>Finance data could not be loaded</h3><p>Please refresh the page and try again.</p>"}
-els.adminButton.onclick=()=>{const target=window.APP_CONFIG&&window.APP_CONFIG.ADMIN_APP_URL;if(target)window.open(target,"_blank","noopener");else alert("Admin portal is not configured yet.")};
-document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{currentView=b.dataset.view;render();document.querySelector(".toolbar").scrollIntoView({behavior:"smooth",block:"start"})});
-els.from.onchange=render;els.to.onchange=render;$("clearFilters").onclick=()=>{els.from.value="";els.to.value="";render()};els.backdrop.onclick=e=>{if(e.target===els.backdrop)els.backdrop.hidden=true};$("modalClose").onclick=()=>els.backdrop.hidden=true;render();loadLiveData();
+const els={
+  incomeTotal:$("incomeTotal"),expenseTotal:$("expenseTotal"),balanceTotal:$("balanceTotal"),
+  viewTitle:$("viewTitle"),body:$("transactionBody"),empty:$("emptyState"),count:$("entryCount"),
+  panelIncome:$("panelIncome"),panelExpense:$("panelExpense"),panelNet:$("panelNet"),
+  from:$("fromDate"),to:$("toDate"),adminButton:$("adminButton"),backdrop:$("modalBackdrop")
+};
+
+function totals(list){
+  const income=list.filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0);
+  const expense=list.filter(x=>x.type==="expense").reduce((s,x)=>s+x.amount,0);
+  return{income,expense,balance:income-expense};
+}
+function filtered(){
+  const from=els.from.value,to=els.to.value;
+  return[...transactions]
+    .filter(x=>currentView==="all"||x.type===currentView)
+    .filter(x=>(!from||x.date>=from)&&(!to||x.date<=to))
+    .sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+}
+function esc(v){
+  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+function runningBalanceMap(){
+  const chronological=[...transactions].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  let run=0;
+  const map=new Map();
+  chronological.forEach(x=>{
+    run+=x.type==="income"?x.amount:-x.amount;
+    map.set(x.id,run);
+  });
+  return map;
+}
+function render(){
+  const list=filtered(),t=totals(list),map=runningBalanceMap();
+  els.viewTitle.textContent=currentView==="income"?"Income Transactions":currentView==="expense"?"Expenditure Transactions":"Total Aggregation";
+  els.count.textContent=list.length;
+  els.panelIncome.textContent=money(t.income);
+  els.panelExpense.textContent=money(t.expense);
+  els.panelNet.textContent=money(t.balance);
+  els.body.innerHTML="";
+  list.forEach(x=>{
+    const balance=x.runningBalance!==undefined&&x.runningBalance!==""?Number(x.runningBalance):map.get(x.id);
+    const tr=document.createElement("tr");
+    tr.innerHTML=
+      "<td>"+esc(formatDate(x.date))+"</td>"+
+      "<td>"+esc(x.occation||"")+"</td>"+
+      "<td><span class=\"type-pill "+(x.type==="income"?"type-income":"type-expense")+"\">"+(x.type==="income"?"Income":"Expenditure")+"</span></td>"+
+      "<td><strong>"+esc(x.description)+"</strong></td>"+
+      "<td>"+esc(x.category)+"</td>"+
+      "<td>"+esc(x.payment)+"</td>"+
+      "<td class=\"amount "+(x.type==="income"?"text-income":"text-expense")+"\">"+(x.type==="income"?"+":"-")+" "+money(x.amount)+"</td>"+
+      "<td class=\"balance-col "+(balance<0?"balance-negative":"balance-positive")+"\">"+money(balance)+"</td>"+
+      "<td>"+esc(x.updatedBy||"")+"</td>"+
+      "<td>"+esc(formatModifiedDate(x.modifiedDate))+"</td>";
+    els.body.appendChild(tr);
+  });
+  els.empty.hidden=list.length!==0;
+  const all=totals(transactions);
+  els.incomeTotal.textContent=money(all.income);
+  els.expenseTotal.textContent=money(all.expense);
+  els.balanceTotal.textContent=money(all.balance);
+}
+function loadLiveData(){
+  const url=window.APP_CONFIG&&window.APP_CONFIG.APPS_SCRIPT_URL;
+  if(!url){showLoadError();return;}
+  const callback="templeFinanceCallback";
+  let finished=false,timeout;
+  const script=document.createElement("script");
+  const cleanup=()=>{
+    if(finished)return;
+    finished=true;
+    clearTimeout(timeout);
+    window[callback]=null;
+    script.remove();
+  };
+  window[callback]=payload=>{
+    try{
+      if(payload&&Array.isArray(payload.transactions)){
+        transactions=payload.transactions.map(x=>{
+          const rawType=String(x.type||"").trim().toLowerCase();
+          const type=rawType==="expenditure"||rawType==="expense"?"expense":rawType==="income"?"income":rawType;
+          return{
+            ...x,
+            id:Number(x.id)||0,
+            date:normalizeDate(x.date),
+            occation:String(x.occation||x.occasion||"").trim(),
+            type,
+            description:String(x.description||"").trim(),
+            category:String(x.category||"").trim(),
+            payment:String(x.payment||"").trim(),
+            amount:Number(x.amount)||0,
+            runningBalance:x.runningBalance,
+            updatedBy:String(x.updatedBy||x.updatedByPerson||"").trim(),
+            modifiedDate:x.modifiedDate||""
+          };
+        });
+        liveMode=true;
+        render();
+        cleanup();
+        return;
+      }
+      showLoadError();
+    }catch(error){showLoadError();}
+    cleanup();
+  };
+  script.onerror=()=>{showLoadError();cleanup();};
+  script.src=url+"?prefix="+encodeURIComponent(callback)+"&_="+Date.now();
+  document.head.appendChild(script);
+  timeout=setTimeout(()=>{if(!finished){showLoadError();cleanup();}},10000);
+}
+function showLoadError(){
+  transactions=[];
+  render();
+  els.empty.hidden=false;
+  els.empty.innerHTML="<div class=\"empty-icon\">!</div><h3>Finance data could not be loaded</h3><p>Please refresh the page and try again.</p>";
+}
+els.adminButton.onclick=()=>{
+  const target=window.APP_CONFIG&&window.APP_CONFIG.ADMIN_APP_URL;
+  if(target)window.open(target,"_blank","noopener");
+  else alert("Admin portal is not configured yet.");
+};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{
+  currentView=b.dataset.view;
+  render();
+  document.querySelector(".toolbar").scrollIntoView({behavior:"smooth",block:"start"});
+});
+els.from.onchange=render;
+els.to.onchange=render;
+$("clearFilters").onclick=()=>{
+  els.from.value="";
+  els.to.value="";
+  render();
+};
+$("exportPdf").onclick=()=>window.print();
+els.backdrop.onclick=e=>{if(e.target===els.backdrop)els.backdrop.hidden=true};
+$("modalClose").onclick=()=>els.backdrop.hidden=true;
+render();
+loadLiveData();
