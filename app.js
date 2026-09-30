@@ -89,19 +89,40 @@ function render(){
 }
 function loadLiveData(){
   const url=window.APP_CONFIG&&window.APP_CONFIG.APPS_SCRIPT_URL;
-  if(!url){showLoadError();return;}
-  const callback="templeFinanceCallback";
-  let finished=false,timeout;
-  const script=document.createElement("script");
-  const cleanup=()=>{
-    if(finished)return;
-    finished=true;
-    clearTimeout(timeout);
-    window[callback]=null;
-    script.remove();
-  };
-  window[callback]=payload=>{
+  const cacheKey="durgamma_public_transactions_v2";
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){
     try{
+      const parsed=JSON.parse(cached);
+      if(Array.isArray(parsed.transactions)){
+        transactions=parsed.transactions;
+        render();
+      }
+    }catch(error){}
+  }
+  if(!url){
+    if(!cached)showLoadError();
+    return;
+  }
+
+  const maxAttempts=3;
+  let attempt=0;
+
+  function request(){
+    attempt++;
+    const callback="templeFinanceCallback_"+Date.now()+"_"+attempt;
+    let finished=false,timeout;
+    const script=document.createElement("script");
+
+    const cleanup=()=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timeout);
+      try{delete window[callback];}catch(error){window[callback]=null;}
+      script.remove();
+    };
+
+    window[callback]=payload=>{
       if(payload&&Array.isArray(payload.transactions)){
         transactions=payload.transactions.map(x=>{
           const rawType=String(x.type||"").trim().toLowerCase();
@@ -121,19 +142,34 @@ function loadLiveData(){
             modifiedDate:x.modifiedDate||""
           };
         });
+        try{localStorage.setItem(cacheKey,JSON.stringify({savedAt:Date.now(),transactions:transactions}));}catch(error){}
         liveMode=true;
         render();
         cleanup();
         return;
       }
-      showLoadError();
-    }catch(error){showLoadError();}
-    cleanup();
-  };
-  script.onerror=()=>{showLoadError();cleanup();};
-  script.src=url+"?prefix="+encodeURIComponent(callback)+"&_="+Date.now();
-  document.head.appendChild(script);
-  timeout=setTimeout(()=>{if(!finished){showLoadError();cleanup();}},10000);
+      cleanup();
+      if(attempt<maxAttempts)setTimeout(request,700);
+      else if(!cached)showLoadError();
+    };
+
+    script.onerror=()=>{
+      cleanup();
+      if(attempt<maxAttempts)setTimeout(request,700);
+      else if(!cached)showLoadError();
+    };
+
+    script.src=url+"?prefix="+encodeURIComponent(callback)+"&_="+Date.now();
+    document.head.appendChild(script);
+    timeout=setTimeout(()=>{
+      if(finished)return;
+      cleanup();
+      if(attempt<maxAttempts)setTimeout(request,700);
+      else if(!cached)showLoadError();
+    },7000);
+  }
+
+  request();
 }
 function showLoadError(){
   transactions=[];
